@@ -701,12 +701,12 @@ class FilesystemTransaction(Transaction):
             user = (await anyio.to_thread.run_sync(pwd.getpwuid, stat.st_uid)).pw_name
             group = (await anyio.to_thread.run_sync(grp.getgrgid, stat.st_gid)).gr_name
 
-        return ChangedOwnerPermissionsAction(
-            path=path,
-            user=user,
-            group=group,
-            permissions=Permissions.from_mode(stat.st_mode),
-        )
+            return ChangedOwnerPermissionsAction(
+                path=path,
+                user=user,
+                group=group,
+                permissions=Permissions.from_mode(stat.st_mode),
+            )
 
 
 def _validate_path(root_dir: anyio.Path, path: anyio.Path) -> anyio.Path:
