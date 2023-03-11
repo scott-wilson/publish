@@ -610,12 +610,6 @@ async fn test_windows_hard_link_file_success() {
 
     assert_eq!(s_v, t_v);
 
-    use std::os::unix::fs::MetadataExt;
-    let source_metadata = std::fs::metadata(&source_file).unwrap();
-    let target_metadata = std::fs::metadata(&target_file).unwrap();
-
-    assert_eq!(source_metadata.ino(), target_metadata.ino());
-
     transaction.rollback().await.unwrap();
     assert!(source_file.is_file());
     assert!(!target_file.exists());
