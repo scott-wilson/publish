@@ -504,7 +504,10 @@ async def test_move_file_failure_target_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_target_file} is not relative to {target_dir}",
+        match=(
+            f"Path {re.escape(str(relative_target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -862,6 +865,7 @@ async def test_soft_link_dir_success(tmp_path_factory: pytest.TempPathFactory):
     assert not target_file.is_file()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows is not implemented")
 @pytest.mark.asyncio()
 async def test_change_owner_permissions_success(
     tmp_path_factory: pytest.TempPathFactory,
