@@ -14,14 +14,27 @@ bitflags::bitflags! {
     }
 }
 
+/// The permission enum represents the state of a permission bit.
 #[derive(Debug, Clone, Copy)]
 pub enum Permission {
+    /// Unchanged means that the permission bit should not be changed.
+    ///
+    /// For example, if the read permission should be set or unset, but the
+    /// write and execute should be unchanged, then the permissions as a tuple
+    /// would look like
+    /// `(Permission::Set, Permission::Unchanged, Permission::Unchanged)`
     Unchanged,
+    /// Set represents that the permission bit should be set to enabled.
     Set,
+    /// Unset represents that the permission bit should be set to disabled.
     Unset,
 }
 
 impl Permission {
+    /// Return a new permission with the other permission applied.
+    ///
+    /// If the other permission is [Permission::Unchanged], then the original
+    /// permission will be used instead.
     pub fn overwrite(&self, other: &Self) -> Self {
         match other {
             Self::Unchanged => *self,
@@ -37,14 +50,25 @@ impl Default for Permission {
     }
 }
 
+/// The ScopedPermission represents a permission set for an entity.
+///
+/// This would be the read, write, or execute permissions for a user, group, or
+/// other.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ScopedPermissions {
+    /// The read permission.
     pub read: Permission,
+    /// The write permission.
     pub write: Permission,
+    /// The execute permission.
     pub execute: Permission,
 }
 
 impl ScopedPermissions {
+    /// Return a new permission with the other permission applied.
+    ///
+    /// If the other permission is [Permission::Unchanged], then the original
+    /// permission will be used instead.
     pub fn overwrite(&self, other: &Self) -> Self {
         Self {
             read: self.read.overwrite(&other.read),
@@ -54,14 +78,25 @@ impl ScopedPermissions {
     }
 }
 
+/// The Permissions type represents a full set of permissions.
+///
+/// This contains the read, write, and execute permissions for users, groups,
+/// and other. This assumes a Unix-like file system.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Permissions {
+    /// The user permissions.
     pub user: ScopedPermissions,
+    /// The group permissions.
     pub group: ScopedPermissions,
+    /// The other permissions.
     pub other: ScopedPermissions,
 }
 
 impl Permissions {
+    /// Convert a Unix mode to a Permissions object.
+    ///
+    /// This will ignore any bits that are not related to the user, group, or
+    /// other permissions.
     pub fn from_mode(mode: u32) -> Self {
         let mode = UnixPermissions::from_bits_truncate(mode);
 
@@ -130,6 +165,7 @@ impl Permissions {
         Permissions { user, group, other }
     }
 
+    /// Convert the permissions to a Unix mode integer.
     pub fn as_mode(&self) -> Result<u32, crate::Error> {
         let mut mode = UnixPermissions::empty();
 
@@ -182,6 +218,10 @@ impl Permissions {
         Ok(mode.bits())
     }
 
+    /// Return a new permission with the other permission applied.
+    ///
+    /// If the other permission is [Permission::Unchanged], then the original
+    /// permission will be used instead.
     pub fn overwrite(&self, other: &Self) -> Self {
         Self {
             user: self.user.overwrite(&other.user),
@@ -217,6 +257,23 @@ enum FilesystemActionType {
     Delete,
 }
 
+/// The FilesystemTransaction type handles filesystem operations.
+///
+/// This includes copying paths, moving paths, hard linking paths, soft linking
+/// paths, deleting paths, creating directories, and changing permissions and
+/// ownership.
+///
+/// All of the actions except deleting can be rolled back. The permission and
+/// ownership metadata will be rolled back to at the point of the transaction
+/// commit.
+///
+/// Actions that can be grouped together will be run in parallel. For example,
+/// copying, moving, or hard linking multiple paths will be done in parallel.
+/// However, this also depends on the order of actions sent to the transaction.
+/// So, if you copy a path, delete a path, then copy another path, then all of
+/// the actions will be done one after another. However, if you copy a path,
+/// copy another path, then delete a path, then the copy actions will be done in
+/// parallel before the delete action.
 pub struct FilesystemTransaction {
     commit_actions: Vec<FilesystemAction>,
     rollback_actions: Vec<FilesystemAction>,
@@ -224,6 +281,12 @@ pub struct FilesystemTransaction {
 }
 
 impl FilesystemTransaction {
+    /// Create a new filesystem transaction.
+    ///
+    /// The root directory is used to control what happens in the directory. For
+    /// example, if a copy goes from an arbitrary path to another arbitrary path
+    /// that is not a subpath of the root, then the copy will fail. Each of the
+    /// actions will state which argument must be relative to the root or not.
     pub async fn new<P: AsRef<Path>>(root_dir: P) -> Result<Self, crate::Error> {
         let auth = cap_std::ambient_authority();
         let async_root_dir_path = root_dir.as_ref().to_path_buf();
@@ -239,6 +302,9 @@ impl FilesystemTransaction {
         })
     }
 
+    /// Copy a path to the root folder.
+    ///
+    /// Rolling back this action will delete the target path.
     pub fn copy_path<P: AsRef<Path>>(&mut self, source_path: P, target_path: P) {
         self.commit_actions.push(FilesystemAction::Copy(
             source_path.as_ref().to_path_buf(),
@@ -246,6 +312,10 @@ impl FilesystemTransaction {
         ));
     }
 
+    /// Move a path to the root folder.
+    ///
+    /// Rolling back this action will move the path back to its original
+    /// location.
     pub fn move_path<P: AsRef<Path>>(&mut self, source_path: P, target_path: P) {
         self.commit_actions.push(FilesystemAction::Move(
             source_path.as_ref().to_path_buf(),
@@ -253,6 +323,14 @@ impl FilesystemTransaction {
         ));
     }
 
+    /// Hard link a path to the root folder.
+    ///
+    /// Rolling back this action will delete the target path.
+    ///
+    /// The source and target paths are relative to the root because this
+    /// assumes that each root directory is a self-contained and immutable
+    /// package. Any file that is outside of the root directory is assumed to be
+    /// mutable.
     pub fn hard_link_path<P: AsRef<Path>>(&mut self, source_path: P, target_path: P) {
         self.commit_actions.push(FilesystemAction::HardLink(
             source_path.as_ref().to_path_buf(),
@@ -260,6 +338,14 @@ impl FilesystemTransaction {
         ));
     }
 
+    /// Soft link a path to the root folder.
+    ///
+    /// Rolling back this action will delete the target path.
+    ///
+    /// The source and target paths are relative to the root because this
+    /// assumes that each root directory is a self-contained and immutable
+    /// package. Any path that is outside of the root directory is assumed to be
+    /// mutable.
     pub fn soft_link_path<P: AsRef<Path>>(&mut self, source_path: P, target_path: P) {
         self.commit_actions.push(FilesystemAction::SoftLink(
             source_path.as_ref().to_path_buf(),
@@ -267,6 +353,10 @@ impl FilesystemTransaction {
         ));
     }
 
+    /// Change the owner and permissions of a path.
+    ///
+    /// Rolling back this action will change the owner and permissions back to
+    /// what they were before the transaction was committed.
     pub fn change_owner_permissions<P: AsRef<Path>, S: AsRef<str>>(
         &mut self,
         path: P,
@@ -283,12 +373,18 @@ impl FilesystemTransaction {
             });
     }
 
+    /// Create a directory.
+    ///
+    /// Rolling back this action will delete the directory.
     pub fn create_directory<P: AsRef<Path>>(&mut self, path: P) {
         self.commit_actions.push(FilesystemAction::CreateDirectory(
             path.as_ref().to_path_buf(),
         ));
     }
 
+    /// Delete a path.
+    ///
+    /// This action cannot be rolled back.
     pub fn delete_path<P: AsRef<Path>>(&mut self, path: P) {
         self.commit_actions
             .push(FilesystemAction::Delete(path.as_ref().to_path_buf()));
