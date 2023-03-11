@@ -1,6 +1,7 @@
 name: Python Test Suite
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - .github/workflows/test_suite_python.yml
