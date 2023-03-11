@@ -3,17 +3,27 @@ use tokio::sync::Mutex;
 
 type ChildTransaction = Mutex<Box<dyn crate::transactions::Transaction + Sync + Send>>;
 
+/// The RootTransaction lets transactions be run in a hierarchical manner.
+///
+/// This can be used to run child transactions in parallel, or in sequence.
+/// Adding a child without using the [RootTransaction::add_child_parallel]
+/// method will cause the child to be run sequentially. Adding a child using the
+/// [RootTransaction::add_child_parallel] will cause the child to be run in
+/// parallel with either the last child added with [RootTransaction::add_child]
+/// or the children in the last call to [RootTransaction::add_child_parallel].
 pub struct RootTransaction {
     children: Vec<Vec<Arc<ChildTransaction>>>,
 }
 
 impl RootTransaction {
+    /// Create a new RootTransaction.
     pub fn new() -> Self {
         Self {
             children: Vec::new(),
         }
     }
 
+    /// Add a child transaction.
     pub fn add_child<T: crate::transactions::Transaction + Sync + Send + 'static>(
         &mut self,
         child: T,
@@ -22,6 +32,11 @@ impl RootTransaction {
             .push(vec![Arc::new(Mutex::new(Box::new(child)))]);
     }
 
+    /// Add a child transaction to be run in parallel.
+    ///
+    /// This transaction will be run in parallel with the last child added with
+    /// [RootTransaction::add_child] the children in the last call to
+    /// [RootTransaction::add_child_parallel].
     pub fn add_child_parallel<T: crate::transactions::Transaction + Sync + Send + 'static>(
         &mut self,
         child: T,

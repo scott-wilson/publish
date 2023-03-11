@@ -531,8 +531,9 @@ async fn test_move_dir_failure_invalid_target_dir() {
     assert!(!other_target_file.is_file());
 }
 
+#[cfg(unix)]
 #[tokio::test]
-async fn test_hard_link_file_success() {
+async fn test_unix_hard_link_file_success() {
     let tmp_root_dir = tempfile::TempDir::new().unwrap();
 
     let source_dir = tmp_root_dir.path();
@@ -564,21 +565,59 @@ async fn test_hard_link_file_success() {
 
     assert_eq!(s_v, t_v);
 
-    if cfg!(unix) {
-        use std::os::unix::fs::MetadataExt;
-        let source_metadata = std::fs::metadata(&source_file).unwrap();
-        let target_metadata = std::fs::metadata(&target_file).unwrap();
+    use std::os::unix::fs::MetadataExt;
+    let source_metadata = std::fs::metadata(&source_file).unwrap();
+    let target_metadata = std::fs::metadata(&target_file).unwrap();
 
-        assert_eq!(source_metadata.ino(), target_metadata.ino());
-    }
+    assert_eq!(source_metadata.ino(), target_metadata.ino());
 
     transaction.rollback().await.unwrap();
     assert!(source_file.is_file());
     assert!(!target_file.exists());
 }
 
+#[cfg(windows)]
 #[tokio::test]
-async fn test_hard_link_files_success() {
+async fn test_windows_hard_link_file_success() {
+    let tmp_root_dir = tempfile::TempDir::new().unwrap();
+
+    let source_dir = tmp_root_dir.path();
+    let target_dir = tmp_root_dir.path();
+    let mut source_file = PathBuf::from(source_dir);
+    source_file.push("source");
+    let mut target_file = PathBuf::from(target_dir);
+    target_file.push("target");
+
+    let mut f = std::fs::File::create(&source_file).unwrap();
+    f.write_all(b"test").unwrap();
+
+    let mut transaction = publish::transactions::FilesystemTransaction::new(target_dir)
+        .await
+        .unwrap();
+
+    transaction.hard_link_path(&PathBuf::from("source"), &PathBuf::from("target"));
+    transaction.commit().await.unwrap();
+
+    assert!(source_file.is_file());
+    assert!(target_file.is_file());
+
+    let mut s_f = std::fs::File::open(&source_file).unwrap();
+    let mut s_v = Vec::new();
+    s_f.read_to_end(&mut s_v).unwrap();
+    let mut t_f = std::fs::File::open(&target_file).unwrap();
+    let mut t_v = Vec::new();
+    t_f.read_to_end(&mut t_v).unwrap();
+
+    assert_eq!(s_v, t_v);
+
+    transaction.rollback().await.unwrap();
+    assert!(source_file.is_file());
+    assert!(!target_file.exists());
+}
+
+#[cfg(unix)]
+#[tokio::test]
+async fn test_unix_hard_link_files_success() {
     let tmp_root_dir = tempfile::TempDir::new().unwrap();
 
     let source_dir = tmp_root_dir.path();
@@ -621,13 +660,69 @@ async fn test_hard_link_files_success() {
 
         assert_eq!(s_v, t_v);
 
-        if cfg!(unix) {
-            use std::os::unix::fs::MetadataExt;
-            let source_metadata = std::fs::metadata(&source_file).unwrap();
-            let target_metadata = std::fs::metadata(&target_file).unwrap();
+        use std::os::unix::fs::MetadataExt;
+        let source_metadata = std::fs::metadata(&source_file).unwrap();
+        let target_metadata = std::fs::metadata(&target_file).unwrap();
 
-            assert_eq!(source_metadata.ino(), target_metadata.ino());
-        }
+        assert_eq!(source_metadata.ino(), target_metadata.ino());
+    }
+
+    transaction.rollback().await.unwrap();
+
+    for file_name in &file_names {
+        let mut source_file = PathBuf::from(source_dir);
+        source_file.push(format!("source_{}", file_name));
+        let mut target_file = PathBuf::from(target_dir);
+        target_file.push(format!("target_{}", file_name));
+        assert!(source_file.is_file(), "{:?}", source_file);
+        assert!(!target_file.exists(), "{:?}", target_file);
+    }
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn test_windows_hard_link_files_success() {
+    let tmp_root_dir = tempfile::TempDir::new().unwrap();
+
+    let source_dir = tmp_root_dir.path();
+    let target_dir = tmp_root_dir.path();
+    let file_names = ["test1", "test2", "test3"];
+
+    let mut transaction = publish::transactions::FilesystemTransaction::new(target_dir)
+        .await
+        .unwrap();
+
+    for file_name in &file_names {
+        let mut source_file = PathBuf::from(source_dir);
+        source_file.push(format!("source_{}", file_name));
+
+        let mut f = std::fs::File::create(&source_file).unwrap();
+        f.write_all(b"test").unwrap();
+
+        transaction.hard_link_path(
+            format!("source_{}", file_name),
+            format!("target_{}", file_name),
+        );
+    }
+
+    transaction.commit().await.unwrap();
+
+    for file_name in &file_names {
+        let mut source_file = PathBuf::from(source_dir);
+        source_file.push(format!("source_{}", file_name));
+        let mut target_file = PathBuf::from(target_dir);
+        target_file.push(format!("target_{}", file_name));
+        assert!(source_file.is_file(), "{:?}", source_file);
+        assert!(target_file.is_file(), "{:?}", target_file);
+
+        let mut s_f = std::fs::File::open(&source_file).unwrap();
+        let mut s_v = Vec::new();
+        s_f.read_to_end(&mut s_v).unwrap();
+        let mut t_f = std::fs::File::open(&target_file).unwrap();
+        let mut t_v = Vec::new();
+        t_f.read_to_end(&mut t_v).unwrap();
+
+        assert_eq!(s_v, t_v);
     }
 
     transaction.rollback().await.unwrap();

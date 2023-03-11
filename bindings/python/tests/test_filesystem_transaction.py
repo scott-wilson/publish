@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import stat
 import sys
 from typing import TYPE_CHECKING
@@ -304,7 +305,9 @@ async def test_copy_file_failure_source_does_not_exist(
     transaction = pypublish.transactions.FilesystemTransaction(target_dir)
     transaction.copy_path(source_file, target_file.relative_to(target_dir))
 
-    with pytest.raises(OSError, match=f"Path {source_file} is not a file or directory"):
+    with pytest.raises(
+        OSError, match=f"Path {re.escape(str(source_file))} is not a file or directory"
+    ):
         await transaction.commit()
 
 
@@ -324,7 +327,11 @@ async def test_copy_file_failure_target_is_not_relative(
     transaction.copy_path(source_file, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -346,7 +353,10 @@ async def test_copy_file_failure_target_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_target_file} is not relative to {target_dir}",
+        match=(
+            f"Path {re.escape(str(relative_target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -394,7 +404,11 @@ async def test_copy_dir_failure_target_is_not_relative(
     transaction.copy_path(source_file.parent, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -416,7 +430,11 @@ async def test_copy_dir_failure_target_is_outside_target_dir(
     transaction.copy_path(source_file.parent, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -460,7 +478,11 @@ async def test_move_file_failure_target_is_not_relative(
     transaction.move_path(source_file, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -482,7 +504,10 @@ async def test_move_file_failure_target_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_target_file} is not relative to {target_dir}",
+        match=(
+            f"Path {re.escape(str(relative_target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -530,7 +555,11 @@ async def test_move_dir_failure_target_is_not_relative(
     transaction.move_path(source_file.parent, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to"
+            f" {re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -552,7 +581,11 @@ async def test_move_dir_failure_target_is_outside_target_dir(
     transaction.move_path(source_file.parent, target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {target_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to "
+            f"{re.escape(str(target_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -599,7 +632,11 @@ async def test_hard_link_file_failure_source_is_not_relative(
     transaction.hard_link_path(source_file, target_file.relative_to(root_dir))
 
     with pytest.raises(
-        PermissionError, match=f"Path {source_file} is not relative to {root_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(source_file))} is not relative to "
+            f"{re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -619,7 +656,11 @@ async def test_hard_link_file_failure_target_is_not_relative(
     transaction.hard_link_path(source_file.relative_to(root_dir), target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {root_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to "
+            f"{re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -640,7 +681,10 @@ async def test_hard_link_file_failure_target_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_target_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_target_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -662,7 +706,10 @@ async def test_hard_link_file_failure_source_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_source_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_source_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -708,7 +755,11 @@ async def test_soft_link_file_failure_source_is_not_relative(
     transaction.soft_link_path(source_file, target_file.relative_to(root_dir))
 
     with pytest.raises(
-        PermissionError, match=f"Path {source_file} is not relative to {root_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(source_file))} is not relative to "
+            f"{re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -728,7 +779,11 @@ async def test_soft_link_file_failure_target_is_not_relative(
     transaction.soft_link_path(source_file.relative_to(root_dir), target_file)
 
     with pytest.raises(
-        PermissionError, match=f"Path {target_file} is not relative to {root_dir}"
+        PermissionError,
+        match=(
+            f"Path {re.escape(str(target_file))} is not relative to "
+            f"{re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -749,7 +804,10 @@ async def test_soft_link_file_failure_target_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_target_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_target_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -771,7 +829,10 @@ async def test_soft_link_file_failure_source_is_outside_target_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_source_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_source_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -804,6 +865,7 @@ async def test_soft_link_dir_success(tmp_path_factory: pytest.TempPathFactory):
     assert not target_file.is_file()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows is not implemented")
 @pytest.mark.asyncio()
 async def test_change_owner_permissions_success(
     tmp_path_factory: pytest.TempPathFactory,
@@ -875,7 +937,10 @@ async def test_change_owner_permissions_failure_path_is_outside_root_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_test_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_test_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -912,7 +977,10 @@ async def test_change_owner_permissions_failure_path_not_relative(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {test_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(test_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -974,7 +1042,10 @@ async def test_create_directory_failure_directory_is_not_relative(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {child_dir} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(child_dir))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -992,7 +1063,10 @@ async def test_create_directory_failure_directory_is_outside_root_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_child_dir} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_child_dir))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -1029,7 +1103,10 @@ async def test_delete_path_failure_path_is_not_relative(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {child_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(child_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -1049,7 +1126,10 @@ async def test_delete_path_failure_path_is_outside_root_dir(
 
     with pytest.raises(
         PermissionError,
-        match=f"Path {relative_child_file} is not relative to {root_dir}",
+        match=(
+            f"Path {re.escape(str(relative_child_file))} is not relative to"
+            f" {re.escape(str(root_dir))}"
+        ),
     ):
         await transaction.commit()
 
@@ -1064,5 +1144,7 @@ async def test_delete_path_failure_path_does_not_exist(
     transaction = pypublish.transactions.FilesystemTransaction(root_dir)
     transaction.delete_path(child_file.relative_to(root_dir))
 
-    with pytest.raises(OSError, match=f"Path {child_file} is not a file or directory"):
+    with pytest.raises(
+        OSError, match=f"Path {re.escape(str(child_file))} is not a file or directory"
+    ):
         await transaction.commit()

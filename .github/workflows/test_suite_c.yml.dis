@@ -1,6 +1,7 @@
 name: C Test Suite
 
 on:
+  workflow_dispatch:
   push:
     paths:
       - .github/workflows/test_suite_c.yml

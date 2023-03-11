@@ -1,5 +1,9 @@
 use crate::transactions::Transaction;
 
+/// Run a publish in a given context.
+///
+/// If the run function fails, then it will automatically roll back all of the
+/// stages that have been run.
 pub async fn run<C, P>(context: C, publish: &P) -> Result<C, crate::Error>
 where
     P: crate::Publish<Context = C> + Send + Sync,
