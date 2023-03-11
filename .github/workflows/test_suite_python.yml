@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - .github/workflows/test_suite_python.yml
-      - bindings/python/pychecks
+      - bindings/python/pypublish
       - bindings/python/tests
       - bindings/python/conftest.py
       - bindings/python/poetry.lock
@@ -12,7 +12,7 @@ on:
   pull_request:
     paths:
       - .github/workflows/test_suite_python.yml
-      - bindings/python/pychecks
+      - bindings/python/pypublish
       - bindings/python/tests
       - bindings/python/conftest.py
       - bindings/python/poetry.lock
@@ -66,7 +66,7 @@ jobs:
           poetry run mypy pypublish
       - name: Run tests
         run: |
-          poetry run pytest --hypothesis-profile default --cov pychecks/ --cov-report=xml -n=auto tests/
+          poetry run pytest --hypothesis-profile default --cov pypublish/ --cov-report=xml -n=auto tests/
       - uses: codecov/codecov-action@v3
         with:
           files: coverage.xml
