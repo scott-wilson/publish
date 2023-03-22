@@ -423,8 +423,12 @@ async fn test_move_dir_success() {
     std::fs::create_dir_all(&source_dir).unwrap();
     assert!(source_dir.is_dir());
 
-    let mut f = std::fs::File::create(&source_file).unwrap();
-    f.write_all(b"test").unwrap();
+    {
+        // Need to release handle in Windows immediately after creating file, or
+        // the transaction will fail.
+        let mut f = std::fs::File::create(&source_file).unwrap();
+        f.write_all(b"test").unwrap();
+    }
 
     let mut transaction = publish::transactions::FilesystemTransaction::new(tmp_target_dir.path())
         .await
