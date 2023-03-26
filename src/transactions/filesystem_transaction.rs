@@ -638,18 +638,20 @@ impl FilesystemTransaction {
             use std::os::unix::fs::PermissionsExt;
 
             if let Some(permissions) = permissions {
-                let mut current_permissions = root_dir.metadata(&path)?.permissions();
+                let mut current_permissions = root_dir.metadata(&path).unwrap().permissions();
                 let current_mode = current_permissions.mode();
                 let new_permissions = Permissions::from_mode(current_mode).overwrite(&permissions);
-                current_permissions.set_mode(new_permissions.as_mode()?);
-                root_dir.set_permissions(&path, current_permissions)?;
+                current_permissions.set_mode(new_permissions.as_mode().unwrap());
+                root_dir
+                    .set_permissions(&path, current_permissions)
+                    .unwrap();
             }
 
             if user.is_none() && group.is_none() {
                 Ok(())
             } else {
                 let uid = match user {
-                    Some(user) => match nix::unistd::User::from_name(&user)? {
+                    Some(user) => match nix::unistd::User::from_name(&user).unwrap() {
                         // TODO: May need to swap rustix for nix or visa versa.
                         Some(u) => Some(unsafe { rustix::process::Uid::from_raw(u.uid.as_raw()) }),
                         None => None,
@@ -657,7 +659,7 @@ impl FilesystemTransaction {
                     None => None,
                 };
                 let gid = match group {
-                    Some(group) => match nix::unistd::Group::from_name(&group)? {
+                    Some(group) => match nix::unistd::Group::from_name(&group).unwrap() {
                         // TODO: May need to swap rustix for nix or visa versa.
                         Some(g) => Some(unsafe { rustix::process::Gid::from_raw(g.gid.as_raw()) }),
                         None => None,
@@ -671,7 +673,8 @@ impl FilesystemTransaction {
                     uid,
                     gid,
                     rustix::fs::AtFlags::SYMLINK_NOFOLLOW,
-                )?;
+                )
+                .unwrap();
 
                 Ok(())
             }
