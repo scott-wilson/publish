@@ -5,16 +5,16 @@ on:
   push:
     paths:
       - .github/workflows/test_suite_python.yml
-      - bindings/python/pypublish
-      - bindings/python/tests
+      - bindings/python/pypublish/**
+      - bindings/python/tests/**
       - bindings/python/conftest.py
       - bindings/python/poetry.lock
       - bindings/python/pyproject.toml
   pull_request:
     paths:
       - .github/workflows/test_suite_python.yml
-      - bindings/python/pypublish
-      - bindings/python/tests
+      - bindings/python/pypublish/**
+      - bindings/python/tests/**
       - bindings/python/conftest.py
       - bindings/python/poetry.lock
       - bindings/python/pyproject.toml

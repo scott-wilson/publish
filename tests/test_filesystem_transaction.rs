@@ -423,8 +423,12 @@ async fn test_move_dir_success() {
     std::fs::create_dir_all(&source_dir).unwrap();
     assert!(source_dir.is_dir());
 
-    let mut f = std::fs::File::create(&source_file).unwrap();
-    f.write_all(b"test").unwrap();
+    {
+        // Need to release handle in Windows immediately after creating file, or
+        // the transaction will fail.
+        let mut f = std::fs::File::create(&source_file).unwrap();
+        f.write_all(b"test").unwrap();
+    }
 
     let mut transaction = publish::transactions::FilesystemTransaction::new(tmp_target_dir.path())
         .await
@@ -1247,194 +1251,198 @@ async fn test_change_file_owner_permissions() {
     assert_eq!(result_metadata.gid(), initial_metadata.gid());
     assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only user execute
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Set;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+    // Only test this on Linux because MacOS doesn't support execute-only
+    // permissions
+    if cfg!(target_os = "linux") {
+        // Only user execute
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Set;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100100);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100100);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only group read
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Set;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+        // Only group read
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Set;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100040);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100040);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only group write
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Set;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+        // Only group write
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Set;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100020);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100020);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only group execute
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Set;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+        // Only group execute
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Set;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100010);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100010);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only other read
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Set;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+        // Only other read
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Set;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100004);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100004);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only other write
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Set;
-    permissions.other.execute = publish::transactions::Permission::Unset;
+        // Only other write
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Set;
+        permissions.other.execute = publish::transactions::Permission::Unset;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100002);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100002);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
 
-    // Only other execute
-    let mut permissions = publish::transactions::Permissions::default();
-    permissions.user.read = publish::transactions::Permission::Unset;
-    permissions.user.write = publish::transactions::Permission::Unset;
-    permissions.user.execute = publish::transactions::Permission::Unset;
-    permissions.group.read = publish::transactions::Permission::Unset;
-    permissions.group.write = publish::transactions::Permission::Unset;
-    permissions.group.execute = publish::transactions::Permission::Unset;
-    permissions.other.read = publish::transactions::Permission::Unset;
-    permissions.other.write = publish::transactions::Permission::Unset;
-    permissions.other.execute = publish::transactions::Permission::Set;
+        // Only other execute
+        let mut permissions = publish::transactions::Permissions::default();
+        permissions.user.read = publish::transactions::Permission::Unset;
+        permissions.user.write = publish::transactions::Permission::Unset;
+        permissions.user.execute = publish::transactions::Permission::Unset;
+        permissions.group.read = publish::transactions::Permission::Unset;
+        permissions.group.write = publish::transactions::Permission::Unset;
+        permissions.group.execute = publish::transactions::Permission::Unset;
+        permissions.other.read = publish::transactions::Permission::Unset;
+        permissions.other.write = publish::transactions::Permission::Unset;
+        permissions.other.execute = publish::transactions::Permission::Set;
 
-    transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
-    transaction.commit().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.change_owner_permissions::<&str, &str>("test", None, None, Some(permissions));
+        transaction.commit().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), 0o100001);
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), 0o100001);
 
-    transaction.rollback().await.unwrap();
-    let result_metadata = std::fs::metadata(&test_file).unwrap();
+        transaction.rollback().await.unwrap();
+        let result_metadata = std::fs::metadata(&test_file).unwrap();
 
-    assert_eq!(result_metadata.uid(), initial_metadata.uid());
-    assert_eq!(result_metadata.gid(), initial_metadata.gid());
-    assert_eq!(result_metadata.mode(), initial_metadata.mode());
+        assert_eq!(result_metadata.uid(), initial_metadata.uid());
+        assert_eq!(result_metadata.gid(), initial_metadata.gid());
+        assert_eq!(result_metadata.mode(), initial_metadata.mode());
+    }
 
     // All
     let mut permissions = publish::transactions::Permissions::default();

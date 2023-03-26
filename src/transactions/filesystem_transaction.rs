@@ -569,7 +569,7 @@ impl FilesystemTransaction {
         let target_path = target_path.to_path_buf();
         let root_dir = root_dir.try_clone()?;
         tokio::task::spawn_blocking(move || {
-            let metadata = source_path.metadata()?;
+            let metadata = root_dir.metadata(&source_path)?;
 
             if metadata.is_file() {
                 match root_dir.symlink_file(source_path, target_path) {
