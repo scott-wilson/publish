@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 async-recursion = "1.0.2"
 async-trait = "0.1.63"
 bitflags = "2.0.2"
-cap-std = "1.0.4"
+cap-std = "2.0.0"
 thiserror = "1.0.38"
 tokio = { version = "1.24.2", features = ["rt", "sync", "fs", "io-util"] }
 
