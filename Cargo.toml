@@ -19,7 +19,7 @@ rustix = { version = "0.38.2", features = ["fs", "process"] }
 nix = { version = "0.26.2", features = ["user"] }
 
 [target.'cfg(windows)'.dependencies]
-windows = "0.48.0"
+windows = "0.51.1"
 
 [dev-dependencies]
 tempfile = "3.3.0"
