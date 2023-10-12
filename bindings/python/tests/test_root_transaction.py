@@ -17,13 +17,16 @@ pytestmark = pytest.mark.asyncio
 class MockTransaction(pypublish.transactions.Transaction):
     def __init__(self, values: List[int], value: int) -> None:
         self.values = values
-        self.value = value
+        self._value = value
+
+    def value(self) -> int:
+        return self._value
 
     async def commit(self) -> None:
-        self.values.append(self.value)
+        self.values.append(self._value)
 
     async def rollback(self) -> None:
-        self.values.remove(self.value)
+        self.values.remove(self._value)
 
 
 async def test_add_child_success():

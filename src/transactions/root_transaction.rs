@@ -52,10 +52,22 @@ impl RootTransaction {
 
         children.push(Arc::new(Mutex::new(Box::new(child))));
     }
+
+    pub fn children(&self) -> Vec<Arc<ChildTransaction>> {
+        self.children
+            .iter()
+            .flatten()
+            .map(|c| c.clone())
+            .collect::<Vec<_>>()
+    }
 }
 
 #[async_trait::async_trait]
 impl crate::transactions::Transaction for RootTransaction {
+    fn value(&self) -> Option<&dyn std::any::Any> {
+        None
+    }
+
     async fn commit(&mut self) -> Result<(), crate::Error> {
         let mut tasks = tokio::task::JoinSet::new();
         let mut errors = Vec::with_capacity(self.children.len());
@@ -138,6 +150,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl crate::transactions::Transaction for ChildTransaction {
+        fn value(&self) -> Option<&dyn std::any::Any> {
+            None
+        }
+
         async fn commit(&mut self) -> Result<(), crate::Error> {
             self.test_vec.lock().unwrap().push(self.value);
 

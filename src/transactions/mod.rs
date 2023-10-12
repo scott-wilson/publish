@@ -31,6 +31,12 @@ pub use root_transaction::RootTransaction;
 /// cannot un-deleted.
 #[async_trait::async_trait]
 pub trait Transaction {
+    /// The value of the committed transaction.
+    ///
+    /// This will be `None` if the transaction has not been committed, or this
+    /// does not produce data.
+    fn value(&self) -> Option<&dyn std::any::Any>;
+
     /// Commit the transaction.
     async fn commit(&mut self) -> Result<(), crate::Error>;
 

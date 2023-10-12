@@ -7,7 +7,7 @@ import anyio
 from ._transaction import Transaction
 
 if TYPE_CHECKING:  # pragma: no cover
-    from typing import List
+    from typing import List, Optional
 
 
 class RootTransaction(Transaction):
@@ -23,6 +23,14 @@ class RootTransaction(Transaction):
 
     def __init__(self) -> None:
         self.__children: List[List[Transaction]] = []
+
+    def value(self) -> Optional[List[Transaction]]:
+        children = []
+
+        for child in self.__children:
+            children.extend(child)
+
+        return children
 
     def add_child(self, transaction: Transaction) -> None:
         """Add a child transaction.

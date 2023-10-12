@@ -1,4 +1,10 @@
+from __future__ import annotations
+
 import abc
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover
+    from typing import Any, Optional
 
 
 class Transaction(abc.ABC):
@@ -10,6 +16,10 @@ class Transaction(abc.ABC):
     if a file is copied, it can be deleted. However, if a file is deleted,
     then it cannot un-deleted.
     """
+
+    @abc.abstractmethod
+    def value(self) -> Optional[Any]:  # pragma: no cover  # noqa: ANN401
+        ...
 
     @abc.abstractmethod
     async def commit(self) -> None:  # pragma: no cover

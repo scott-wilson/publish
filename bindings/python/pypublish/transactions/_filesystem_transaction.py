@@ -380,6 +380,9 @@ class FilesystemTransaction(Transaction):
         self.__commit_actions: List[FileSystemAction] = []
         self.__rollback_actions: List[FileSystemAction] = []
 
+    def value(self) -> Optional[List[FileSystemAction]]:
+        return self.__commit_actions
+
     def copy_path(self, source: PathLike[str], target: PathLike[str]) -> None:
         """Copy a path to the root folder.
 

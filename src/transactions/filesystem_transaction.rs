@@ -693,6 +693,10 @@ impl FilesystemTransaction {
 
 #[async_trait::async_trait]
 impl crate::transactions::Transaction for FilesystemTransaction {
+    fn value(&self) -> Option<&dyn std::any::Any> {
+        Some(&self.commit_actions)
+    }
+
     async fn commit(&mut self) -> Result<(), crate::Error> {
         self.rollback_actions.clear();
 

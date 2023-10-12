@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 import hypothesis
@@ -18,6 +18,9 @@ pytestmark = pytest.mark.asyncio
 
 
 class CommitFailTransaction(pypublish.transactions.Transaction):
+    def value(self) -> None:
+        return None
+
     async def commit(self) -> None:
         raise RuntimeError("Commit failed")
 
@@ -26,6 +29,9 @@ class CommitFailTransaction(pypublish.transactions.Transaction):
 
 
 class RollbackFailTransaction(pypublish.transactions.Transaction):
+    def value(self) -> None:
+        return None
+
     async def commit(self) -> None:
         pass
 
@@ -39,10 +45,13 @@ async def test_run_success():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self, value: int) -> None:
             self.values = transaction_values
-            self.value = value
+            self.__value = value
+
+        def value(self) -> int:
+            return self.__value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self.__value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -100,10 +109,13 @@ async def test_run_without_pre_post_publish_success():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self, value: int) -> None:
             self.values = transaction_values
-            self.value = value
+            self.__value = value
+
+        def value(self) -> int:
+            return self.__value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self.__value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -137,10 +149,13 @@ async def test_run_failure_prepublish_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -159,7 +174,7 @@ async def test_run_failure_prepublish_fail():
         async def publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 2
+            test_transaction._value = 2
             transaction.add_child(test_transaction)
 
             ctx = context + 2
@@ -169,7 +184,7 @@ async def test_run_failure_prepublish_fail():
         async def post_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 3
+            test_transaction._value = 3
             transaction.add_child(test_transaction)
 
             ctx = context + 3
@@ -190,10 +205,13 @@ async def test_run_failure_publish_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -207,7 +225,7 @@ async def test_run_failure_publish_fail():
         async def pre_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 1
+            test_transaction._value = 1
             transaction.add_child(test_transaction)
 
             ctx = context + 1
@@ -222,7 +240,7 @@ async def test_run_failure_publish_fail():
         async def post_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 3
+            test_transaction._value = 3
             transaction.add_child(test_transaction)
 
             ctx = context + 3
@@ -243,10 +261,13 @@ async def test_run_failure_postpublish_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -260,7 +281,7 @@ async def test_run_failure_postpublish_fail():
         async def pre_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 1
+            test_transaction._value = 1
             transaction.add_child(test_transaction)
 
             ctx = context + 1
@@ -270,7 +291,7 @@ async def test_run_failure_postpublish_fail():
         async def publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 2
+            test_transaction._value = 2
             transaction.add_child(test_transaction)
 
             ctx = context + 2
@@ -296,10 +317,13 @@ async def test_run_failure_prepublish_rollback_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -319,7 +343,7 @@ async def test_run_failure_prepublish_rollback_fail():
         async def publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 2
+            test_transaction._value = 2
             transaction.add_child(test_transaction)
 
             ctx = context + 2
@@ -329,7 +353,7 @@ async def test_run_failure_prepublish_rollback_fail():
         async def post_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 3
+            test_transaction._value = 3
             transaction.add_child(test_transaction)
 
             ctx = context + 3
@@ -350,10 +374,13 @@ async def test_run_failure_publish_rollback_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -367,7 +394,7 @@ async def test_run_failure_publish_rollback_fail():
         async def pre_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 1
+            test_transaction._value = 1
             transaction.add_child(test_transaction)
 
             ctx = context + 1
@@ -383,7 +410,7 @@ async def test_run_failure_publish_rollback_fail():
         async def post_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 3
+            test_transaction._value = 3
             transaction.add_child(test_transaction)
 
             ctx = context + 3
@@ -404,10 +431,13 @@ async def test_run_failure_postpublish_rollback_fail():
     class TestTransaction(pypublish.transactions.Transaction):
         def __init__(self) -> None:
             self.values = []
-            self.value = 0
+            self._value = 0
+
+        def value(self) -> int:
+            return self._value
 
         async def commit(self) -> None:
-            self.values.append(self.value)
+            self.values.append(self._value)
 
         async def rollback(self) -> None:
             self.values.pop()
@@ -421,7 +451,7 @@ async def test_run_failure_postpublish_rollback_fail():
         async def pre_publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 1
+            test_transaction._value = 1
             transaction.add_child(test_transaction)
 
             ctx = context + 1
@@ -431,7 +461,7 @@ async def test_run_failure_postpublish_rollback_fail():
         async def publish(
             self, transaction: pypublish.transactions.RootTransaction, context: int
         ) -> int:
-            test_transaction.value = 2
+            test_transaction._value = 2
             transaction.add_child(test_transaction)
 
             ctx = context + 2
@@ -626,6 +656,9 @@ async def test_run_failure_step_raised_exception(
     raise_postpublish_rollback: bool,
 ):
     class TestPrePublishTransaction(pypublish.transactions.Transaction):
+        def value(self) -> None:
+            return None
+
         async def commit(self) -> None:
             if raise_prepublish_commit:
                 raise RuntimeError("Commit failed")
@@ -635,6 +668,9 @@ async def test_run_failure_step_raised_exception(
                 raise RuntimeError("Rollback failed")
 
     class TestPublishTransaction(pypublish.transactions.Transaction):
+        def value(self) -> None:
+            return None
+
         async def commit(self) -> None:
             if raise_publish_commit:
                 raise RuntimeError("Commit failed")
@@ -644,6 +680,9 @@ async def test_run_failure_step_raised_exception(
                 raise RuntimeError("Rollback failed")
 
     class TestPostPublishTransaction(pypublish.transactions.Transaction):
+        def value(self) -> None:
+            return None
+
         async def commit(self) -> None:
             if raise_postpublish_commit:
                 raise RuntimeError("Commit failed")
