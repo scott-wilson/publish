@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Generic, TypeVar
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .transactions import RootTransaction
+    from typing import Union
 
-C = TypeVar("C")
+    from ._context import Context, ContextView
 
 
-class Publish(Generic[C], metaclass=abc.ABCMeta):
+class Publish(metaclass=abc.ABCMeta):
     """The Publish interface.
 
     This interface is used to define a publish process such as publishing an
@@ -24,7 +24,7 @@ class Publish(Generic[C], metaclass=abc.ABCMeta):
     be rolled back if one of the publish stages fail.
     """
 
-    async def pre_publish(self, transaction: RootTransaction, context: C) -> C:
+    async def pre_publish(self, context: ContextView) -> Union[Context, ContextView]:
         """Pre-publish stage.
 
         This stage should be used to prepare the main publish. For example,
@@ -41,8 +41,11 @@ class Publish(Generic[C], metaclass=abc.ABCMeta):
         """
         return context
 
+    async def rollback_pre_publish(self, context: ContextView) -> None:
+        return None
+
     @abc.abstractmethod
-    async def publish(self, transaction: RootTransaction, context: C) -> C:
+    async def publish(self, context: ContextView) -> Union[Context, ContextView]:
         """Publish stage.
 
         This stage should be used for the main publish work. For example,
@@ -60,7 +63,10 @@ class Publish(Generic[C], metaclass=abc.ABCMeta):
         """
         ...  # pragma: no cover
 
-    async def post_publish(self, transaction: RootTransaction, context: C) -> C:
+    async def rollback_publish(self, context: ContextView) -> None:
+        return None
+
+    async def post_publish(self, context: ContextView) -> Union[Context, ContextView]:
         """Post-publish stage.
 
         This stage should be used to finalize the publish. For example,
@@ -77,3 +83,6 @@ class Publish(Generic[C], metaclass=abc.ABCMeta):
             The context and results of the post-publish stage.
         """
         return context
+
+    async def rollback_post_publish(self, context: ContextView) -> None:
+        return None
