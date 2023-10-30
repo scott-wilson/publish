@@ -2,40 +2,42 @@ struct TestPublish;
 
 #[async_trait::async_trait]
 impl publish::Publish for TestPublish {
-    type Context = u8;
-
-    async fn pre_publish(
+    async fn pre_publish<'a>(
         &self,
-        _transaction: &mut publish::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, publish::Error> {
-        Ok(context + 1)
+        context: &'a publish::Context,
+    ) -> Result<std::borrow::Cow<'a, publish::Context>, publish::Error> {
+        let mut context = context.to_owned();
+        context.set("test", publish::Value::Integer(1));
+
+        Ok(std::borrow::Cow::Owned(context))
     }
 
-    async fn publish(
+    async fn publish<'a>(
         &self,
-        _transaction: &mut publish::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, publish::Error> {
-        Ok(context + 2)
+        context: &'a publish::Context,
+    ) -> Result<std::borrow::Cow<'a, publish::Context>, publish::Error> {
+        let mut context = context.to_owned();
+        context.set("test", publish::Value::Integer(2));
+
+        Ok(std::borrow::Cow::Owned(context))
     }
 
-    async fn post_publish(
+    async fn post_publish<'a>(
         &self,
-        _transaction: &mut publish::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, publish::Error> {
-        Ok(context + 3)
+        context: &'a publish::Context,
+    ) -> Result<std::borrow::Cow<'a, publish::Context>, publish::Error> {
+        let mut context = context.to_owned();
+        context.set("test", publish::Value::Integer(3));
+
+        Ok(std::borrow::Cow::Owned(context))
     }
 }
 
 #[tokio::test]
 async fn test_runner_success() {
-    let ctx = 0;
-
     let test_publish = TestPublish;
 
-    let result = publish::run(ctx, &test_publish).await.unwrap();
+    let result = publish::run(&test_publish).await.unwrap();
 
-    assert_eq!(result, 0 + 1 + 2 + 3);
+    assert_eq!(result.get("test").unwrap(), &publish::Value::Integer(3));
 }

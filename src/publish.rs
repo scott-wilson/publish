@@ -12,19 +12,20 @@
 /// transactions can be rolled back if one of the publish stages fail.
 #[async_trait::async_trait]
 pub trait Publish {
-    type Context: Send + Sync;
-
     /// Pre-publish stage.
     ///
     /// This stage should be used to prepare the main publish. For example,
     /// creating and unlocking the publish directory, preparing a publish
     /// database entry, etc.
-    async fn pre_publish(
+    async fn pre_publish<'a>(
         &self,
-        _transaction: &mut crate::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, crate::Error> {
-        Ok(context)
+        context: &'a crate::Context,
+    ) -> Result<std::borrow::Cow<'a, crate::Context>, crate::Error> {
+        Ok(std::borrow::Cow::Borrowed(context))
+    }
+
+    async fn rollback_pre_publish(&self, _context: &crate::Context) -> Result<(), crate::Error> {
+        Ok(())
     }
 
     /// Publish stage.
@@ -33,11 +34,14 @@ pub trait Publish {
     /// generating caches, transforming rigs into an optimized version, etc.
     /// Then, the publish stage should use the transactions to make the changes
     /// permanent.
-    async fn publish(
+    async fn publish<'a>(
         &self,
-        transaction: &mut crate::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, crate::Error>;
+        context: &'a crate::Context,
+    ) -> Result<std::borrow::Cow<'a, crate::Context>, crate::Error>;
+
+    async fn rollback_publish(&self, _context: &crate::Context) -> Result<(), crate::Error> {
+        Ok(())
+    }
 
     /// Post-publish stage.
     ///
@@ -45,11 +49,14 @@ pub trait Publish {
     /// generating a metadata file that contains data about the files in the
     /// publish such as a checksum, stats, etc. Or, finalizing the publish
     /// database entry.
-    async fn post_publish(
+    async fn post_publish<'a>(
         &self,
-        _transaction: &mut crate::transactions::RootTransaction,
-        context: Self::Context,
-    ) -> Result<Self::Context, crate::Error> {
-        Ok(context)
+        context: &'a crate::Context,
+    ) -> Result<std::borrow::Cow<'a, crate::Context>, crate::Error> {
+        Ok(std::borrow::Cow::Borrowed(context))
+    }
+
+    async fn rollback_post_publish(&self, _context: &crate::Context) -> Result<(), crate::Error> {
+        Ok(())
     }
 }
