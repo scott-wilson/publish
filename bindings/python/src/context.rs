@@ -41,9 +41,10 @@ impl<'py> FromPyObject<'py> for Value {
                 inner: publish::Value::Array(value.into_iter().map(|v| v.inner).collect()),
             })
         } else {
-            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
-                format!("Cannot convert {} to Value", obj.get_type().name()?),
-            ))
+            Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(format!(
+                "Cannot convert {} to Value",
+                obj.get_type().name()?
+            )))
         }
     }
 }
