@@ -1,10 +1,9 @@
 name: Rust Test Suite
 
 on:
-  workflow_dispatch:
   push:
     paths:
-      - .github/workflows/test_suite_rust.yml
+      - .github/workflows/*_rust.yml
       - src/**
       - tests/**
       - Cargo.lock
@@ -12,7 +11,7 @@ on:
       - deny.toml
   pull_request:
     paths:
-      - .github/workflows/test_suite_rust.yml
+      - .github/workflows/*_rust.yml
       - src/**
       - tests/**
       - Cargo.lock
@@ -35,10 +34,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: EmbarkStudios/cargo-deny-action@v1
+      - name: Run Cargo Clippy
+        run: cargo clippy
+      - name: Run Cargo Fmt
+        run: cargo fmt --check
+      - name: Run Cargo Deny
+        uses: EmbarkStudios/cargo-deny-action@v1
         if: ${{ matrix.os == 'ubuntu-latest' }}
-      - run: cargo clippy
-      - run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+      - name: Generate coverage report from Rust tests
+        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
       - uses: codecov/codecov-action@v3
         with:
           files: lcov.info

@@ -1,3 +1,5 @@
+# ruff: noqa: D103,D100,S101
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
@@ -14,7 +16,7 @@ if TYPE_CHECKING:  # pragma: no cover
 pytestmark = pytest.mark.asyncio
 
 
-async def test_run_success():
+async def test_run_success() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -64,7 +66,7 @@ async def test_run_success():
     ]
 
 
-async def test_run_without_pre_post_publish_success():
+async def test_run_without_pre_post_publish_success() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -87,7 +89,7 @@ async def test_run_without_pre_post_publish_success():
     ]
 
 
-async def test_run_failure_prepublish_fail():
+async def test_run_failure_prepublish_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -130,7 +132,7 @@ async def test_run_failure_prepublish_fail():
     assert test_publish.values == []
 
 
-async def test_run_failure_publish_fail():
+async def test_run_failure_publish_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -169,7 +171,7 @@ async def test_run_failure_publish_fail():
     assert test_publish.values == [("pre_publish", 1)]
 
 
-async def test_run_failure_postpublish_fail():
+async def test_run_failure_postpublish_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -209,7 +211,7 @@ async def test_run_failure_postpublish_fail():
     assert test_publish.values == [("pre_publish", 1), ("publish", 3)]
 
 
-async def test_run_failure_prepublish_rollback_fail():
+async def test_run_failure_prepublish_rollback_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -249,13 +251,15 @@ async def test_run_failure_prepublish_rollback_fail():
 
     test_publish = TestPublish()
 
-    with pytest.raises(RuntimeError, match="Prepublish rollback failed"):
+    with pytest.raises(
+        RuntimeError, match="Error rolling back: Error while rolling back pre_publish"
+    ):
         await pypublish.run(test_publish)
 
     assert test_publish.values == []
 
 
-async def test_run_failure_publish_rollback_fail():
+async def test_run_failure_publish_rollback_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -291,13 +295,15 @@ async def test_run_failure_publish_rollback_fail():
 
     test_publish = TestPublish()
 
-    with pytest.raises(RuntimeError, match="Publish rollback failed"):
+    with pytest.raises(
+        RuntimeError, match="Error rolling back: Error while rolling back publish"
+    ):
         await pypublish.run(test_publish)
 
     assert test_publish.values == [("pre_publish", 1)]
 
 
-async def test_run_failure_postpublish_rollback_fail():
+async def test_run_failure_postpublish_rollback_fail() -> None:
     class TestPublish(pypublish.Publish):
         def __init__(self) -> None:
             self.values = []
@@ -334,7 +340,9 @@ async def test_run_failure_postpublish_rollback_fail():
 
     test_publish = TestPublish()
 
-    with pytest.raises(RuntimeError, match="Postpublish rollback failed"):
+    with pytest.raises(
+        RuntimeError, match="Error rolling back: Error while rolling back post_publish"
+    ):
         await pypublish.run(test_publish)
 
     assert test_publish.values == [("pre_publish", 1), ("publish", 3)]
@@ -371,7 +379,7 @@ async def test_run_failure_step_raised_exception(
     raise_prepublish_rollback: bool,
     raise_publish_rollback: bool,
     raise_postpublish_rollback: bool,
-):
+) -> None:
     class TestPublish(pypublish.Publish):
         async def pre_publish(
             self, context: pypublish.ContextView

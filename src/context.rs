@@ -39,9 +39,9 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn new() -> Self {
+    pub fn new<T: std::iter::IntoIterator<Item = (String, Value)>>(context: T) -> Self {
         Self {
-            data: std::collections::HashMap::new(),
+            data: context.into_iter().collect(),
         }
     }
 
@@ -51,5 +51,40 @@ impl Context {
 
     pub fn set(&mut self, key: &str, value: Value) {
         self.data.insert(key.to_string(), value);
+    }
+
+    pub fn iter(&self) -> ContextIter {
+        ContextIter {
+            data: self.data.iter(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+}
+
+impl IntoIterator for Context {
+    type Item = (String, Value);
+    type IntoIter = std::collections::hash_map::IntoIter<String, Value>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.data.into_iter()
+    }
+}
+
+pub struct ContextIter<'a> {
+    data: std::collections::hash_map::Iter<'a, String, Value>,
+}
+
+impl<'a> Iterator for ContextIter<'a> {
+    type Item = (&'a String, &'a Value);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.data.next()
     }
 }

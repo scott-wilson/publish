@@ -6,14 +6,15 @@ pub async fn run<P>(publish: &P) -> Result<crate::Context, crate::Error>
 where
     P: crate::Publish + Send + Sync,
 {
-    let context = crate::Context::new();
+    let context = crate::Context::default();
     let pre_publish_context = match publish.pre_publish(&context).await {
         Ok(ctx) => ctx,
         Err(err) => {
             if let Err(rollback_err) = publish.rollback_pre_publish(&context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back pre_publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
 
@@ -25,16 +26,18 @@ where
         Ok(ctx) => ctx,
         Err(err) => {
             if let Err(rollback_err) = publish.rollback_publish(&pre_publish_context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
 
             if let Err(rollback_err) = publish.rollback_pre_publish(&context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back pre_publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
 
@@ -46,22 +49,25 @@ where
         Ok(ctx) => ctx,
         Err(err) => {
             if let Err(rollback_err) = publish.rollback_post_publish(&publish_context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back post_publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
             if let Err(rollback_err) = publish.rollback_publish(&pre_publish_context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
 
             if let Err(rollback_err) = publish.rollback_pre_publish(&context).await {
-                return Err(crate::Error::Rollback(
-                    Box::new(rollback_err),
+                return Err(crate::Error::new_rollback(
+                    "Error while rolling back pre_publish",
                     Box::new(err),
+                    Some(Box::new(rollback_err)),
                 ));
             }
 
