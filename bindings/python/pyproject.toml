@@ -1,29 +1,37 @@
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["maturin>=1.4,<2.0"]
+build-backend = "maturin"
 
-[tool.poetry]
+[project]
 name = "pypublish"
-version = "0.1.0"
-description = "A simple publish framework"
-authors = ["Scott Wilson <scott@propersquid.com>"]
-license = "Apache-2.0"
+description = "A simple pubilsh framework"
+authors = [{ name = "Scott Wilson", email = "scott@propersquid.com" }]
+license = { text = "MIT OR Apache-2.0" }
 readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
 
-[tool.poetry.dependencies]
-python = "^3.7"
-anyio = "^3.7.1"
+[project.optional-dependencies]
+build = ["maturin ~= 1.4"]
+test = [
+    "black ~= 23.12; python_version >= \"3.8\"",
+    "black ~= 22.12; python_version == \"3.7\"",
+    "hypothesis ~= 6.79",
+    "pytest ~= 7.4",
+    "pytest-asyncio ~= 0.21",
+    "pytest-cov ~= 4.1",
+    "pytest-xdist ~= 3.5",
+    "ruff ~= 0.1",
+]
+docs = ["myst-parser ~= 2.0", "sphinx ~= 7.2", "sphinx-rtd-theme ~= 2.0"]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "^7.4.3"
-pytest-xdist = "^3.5.0"
-pytest-cov = "^4.1.0"
-hypothesis = "^6.79.4"
-sphinx = "^5.3.0"
-sphinx-rtd-theme = "^2.0.0"
-myst-parser = "^1.0.0"
-pytest-asyncio = "^0.21.1"
-mypy = "^1.4.1"
+[tool.maturin]
+features = ["pyo3/extension-module"]
 
 [tool.ruff]
 select = ["ANN", "BLE", "D", "E", "F", "I", "N", "PT", "S", "YTT"]

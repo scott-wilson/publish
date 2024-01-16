@@ -1,5 +1,6 @@
+# ruff: noqa: D103,D100,S101
+
 import hypothesis
-import pytest
 from hypothesis import strategies
 
 import pypublish
@@ -11,7 +12,9 @@ import pypublish
         strategies.one_of(
             strategies.none(),
             strategies.booleans(),
-            strategies.integers(),
+            # By default, integers can be arbitrarily large, while the context
+            # can only support signed 64-bit integers.
+            strategies.integers(min_value=-1000, max_value=1000),
             strategies.floats(allow_nan=False),
             strategies.text(max_size=10),
         ),
@@ -24,7 +27,7 @@ import pypublish
         max_leaves=10,
     ),
 )
-def test_context_get_success(key: str, value: pypublish.Value):
+def test_context_get_success(key: str, value: pypublish.Value) -> None:
     ctx = pypublish.Context()
     ctx.set(key, value)
 
@@ -37,7 +40,9 @@ def test_context_get_success(key: str, value: pypublish.Value):
         strategies.one_of(
             strategies.none(),
             strategies.booleans(),
-            strategies.integers(),
+            # By default, integers can be arbitrarily large, while the context
+            # can only support signed 64-bit integers.
+            strategies.integers(min_value=-1000, max_value=1000),
             strategies.floats(allow_nan=False),
             strategies.text(max_size=10),
         ),
@@ -50,9 +55,9 @@ def test_context_get_success(key: str, value: pypublish.Value):
         max_leaves=10,
     ),
 )
-def test_contextview_get_success(key: str, value: pypublish.Value):
+def test_contextview_get_success(key: str, value: pypublish.Value) -> None:
     ctx = pypublish.Context()
     ctx.set(key, value)
-    ctx_view = ctx.as_view()
+    ctx_view = ctx.to_view()
 
     assert ctx_view.get(key) == value
