@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cpublish"
+description = "A simple publish framework"
+authors = [{ name = "Scott Wilson", email = "scott@propersquid.com" }]
+license = { text = "MIT OR Apache-2.0" }
+readme = "README.md"
+requires-python = ">=3.7"
+version = "0.1.0"
+
+[project.optional-dependencies]
+docs = [
+    "myst-parser ~= 2.0",
+    "sphinx ~= 7.2",
+    "sphinx-rtd-theme ~= 2.0",
+    "breathe ~= 4.34",
+]

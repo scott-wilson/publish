@@ -1,0 +1,90 @@
+name: C Test Suite
+
+on:
+  push:
+    paths:
+      - .github/workflows/*_c.yml
+      - bindings/c/**
+      - src/**
+      - Cargo.lock
+      - Cargo.toml
+      - deny.toml
+      - .gitmodules
+  pull_request:
+    paths:
+      - .github/workflows/*_c.yml
+      - bindings/c/**
+      - src/**
+      - Cargo.lock
+      - Cargo.toml
+      - deny.toml
+      - .gitmodules
+
+jobs:
+  test:
+    name: C test
+    defaults:
+      run:
+        working-directory: bindings/c
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        include:
+          - os: ubuntu-latest
+            cmake_flags: -DBUILD_WITH_CHECK_COVERAGE=ON
+    runs-on: ${{matrix.os}}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Run Cargo Clippy
+        run: cargo clippy
+      - name: Run Cargo Fmt
+        run: cargo fmt --check
+      - name: Run Cargo Deny
+        uses: EmbarkStudios/cargo-deny-action@v1
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Generate coverage report from Rust tests
+        run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+      - name: Make Build Directory
+        run: mkdir -p build
+      - name: CMake Configure
+        working-directory: bindings/c/build
+        run: |
+          # Make cmocka a static dependency when testing.
+          cmake ../ -DBUILD_SHARED_LIBS=OFF -DBUILD_CPUBLISH_TESTS=ON ${{ matrix.cmake_flags }}
+      - name: CMake Build
+        working-directory: bindings/c/build
+        run: |
+          cmake --build . --config=Debug
+      - name: Run Test
+        working-directory: bindings/c/build
+        run: ctest -C Debug -VV --output-on-failure
+      - name: Run Valgrind
+        working-directory: bindings/c/build
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt update
+          sudo apt install -y valgrind
+          valgrind -v --leak-check=full --show-leak-kinds=all tests/test_context
+          valgrind -v --leak-check=full --show-leak-kinds=all tests/test_publish
+          valgrind -v --leak-check=full --show-leak-kinds=all tests/test_runner
+          valgrind -v --leak-check=full --show-leak-kinds=all tests/test_value
+      - name: Run LCov
+        working-directory: bindings/c/build
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: |
+          sudo apt update
+          sudo apt install -y lcov
+          lcov -c -d . -o coverage.info
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: lang-c
+          files: build/coverage.info
