@@ -20,7 +20,7 @@ dynamic = ["version"]
 build = ["maturin ~= 1.4"]
 test = [
     "hypothesis ~= 6.79",
-    "pytest ~= 8.1; python_version >= \"3.8\"",
+    "pytest ~= 8.0; python_version >= \"3.8\"",
     "pytest ~= 7.4; python_version == \"3.7\"",
     "pytest-asyncio ~= 0.21",
     "pytest-cov ~= 4.1",
